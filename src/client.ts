@@ -18,6 +18,9 @@ import {
 
 const DEFAULT_IDLE_MS = 45_000
 const DEFAULT_MAX_SERVER_RETRY_MS = 5 * 60_000
+// A server `retry: 0` is honoured as "as soon as possible", not as "in a tight loop": a server that
+// keeps closing must not be hammered.
+const MIN_SERVER_RETRY_MS = 100
 const DEFAULT_SCHEDULE_MS = [1000, 2000, 4000, 8000, 16000]
 const JITTER = 0.2
 
@@ -255,7 +258,9 @@ export function createChatStreamClient(url: string, o: StreamOptions = {}): Chat
         progressed = false
       }
       if (attempt >= maxReconnects) throw new ReconnectLimitError(attempt, cause)
-      const delay = serverRetry !== null ? Math.min(serverRetry, maxServerRetryMs) : Math.max(0, backoff(attempt))
+      const delay = serverRetry !== null
+        ? Math.max(Math.min(MIN_SERVER_RETRY_MS, maxServerRetryMs), Math.min(serverRetry, maxServerRetryMs))
+        : Math.max(0, backoff(attempt))
       attempt++
       emitStatus('reconnecting')
       await sleep(delay, signal)

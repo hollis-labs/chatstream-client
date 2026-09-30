@@ -75,7 +75,7 @@ export interface StreamOptions {
   isFinalStatus?: (status: number) => boolean
   /** Give up after this many consecutive reconnects that saw no event. Default: never. */
   maxReconnects?: number
-  /** Cap on a server-sent `retry:`, in milliseconds. Default 300000. */
+  /** Cap on a server-sent `retry:`, in milliseconds. Default 300000. A `retry:` below 100 ms is raised to 100 ms (or to this cap, if lower). */
   maxServerRetryMs?: number
   /** Largest single SSE event, in bytes of decoded text. Default 16 MiB, like go-chatstream's framing. */
   maxEventBytes?: number

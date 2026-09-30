@@ -344,3 +344,22 @@ test('cursorOf, isTerminal, reconcile and capabilities', async () => {
   const over = createChatStreamClient(URL_, { capabilities: { Tools: true, Text: 1 } }).capabilities()
   assert.deepEqual([over.Tools, over.Text, over.Framing], [true, 1, 1])
 })
+
+test('a server retry: 0 is floored: a server that keeps closing is not hammered', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  const server = scripted([
+    [{ send: run(1).slice(0, 2) }, { retry: 0 }, { drop: true }],
+    [{ send: run(1).slice(2) }, { close: true }],
+  ])
+  const { client, ac } = open(server, { backoff: () => 99999, idleTimeoutMs: 0 })
+  const p = collect(client.open(null, ac.signal))
+  for (let k = 0; k < 30; k++) await new Promise((r) => setImmediate(r))
+  assert.equal(server.requests.length, 1)
+  t.mock.timers.tick(99)
+  for (let k = 0; k < 30; k++) await new Promise((r) => setImmediate(r))
+  assert.equal(server.requests.length, 1, 'not immediately: retry: 0 is floored at 100 ms')
+  t.mock.timers.tick(1)
+  for (let k = 0; k < 30; k++) await new Promise((r) => setImmediate(r))
+  assert.equal(server.requests.length, 2, 'at the floor')
+  await p
+})
