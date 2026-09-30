@@ -1,0 +1,16 @@
+{
+  "//": "Emit config. The root tsconfig is noEmit with allowImportingTsExtensions, which is right for typechecking and cannot emit; this turns both off. Source maps and declaration maps are off because they point at `../src`, which the published tarball does not ship. Source imports carry `.js` extensions on purpose so the output runs in Node with no rewrite step.",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "allowImportingTsExtensions": false,
+    "declaration": true,
+    "declarationMap": false,
+    "sourceMap": false,
+    "rootDir": "./src",
+    "outDir": "./dist"
+  },
+  "include": [
+    "src"
+  ]
+}

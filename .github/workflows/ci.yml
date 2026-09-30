@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    name: typecheck, build, tests, pack
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: install
+        run: npm ci
+
+      - name: typecheck
+        run: npm run typecheck
+
+      - name: build
+        run: npm run build
+
+      - name: tests
+        run: npm run test:run
+
+      - name: pack contents
+        run: npm pack --dry-run
+
+      - name: audit (runtime dependencies)
+        run: npm audit --omit=dev
+
+  # The generated wire types need the Go toolchain to check: the generator is
+  # go-envelopes' codegen, and the drift tests import go-chatstream. Kept out of
+  # `gate` so the package's own build and tests do not need Go.
+  codegen:
+    name: generated types are current and match go-chatstream
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: tools/gen/go.mod
+          cache-dependency-path: tools/gen/go.sum
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+
+      # Needs github.com/hollis-labs/go-envelopes and go-chatstream to be
+      # fetchable by `go` (public repositories, or GOPRIVATE plus a token).
+      - name: generated file equals a fresh regeneration
+        run: node scripts/gen-check.mjs
+
+      - name: manifest matches go-chatstream's Go source
+        run: cd tools/gen && go test -count=1 ./...

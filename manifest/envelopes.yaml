@@ -1,0 +1,26 @@
+# Chatstream wire-vocabulary manifest, in go-envelopes' manifest layout
+# (docs/manifest-spec.md there): this file lists the types, and
+# manifest/schemas/<type>.schema.json is the JSON Schema of each.
+#
+# It is the single source of the generated TypeScript in
+# src/generated/chatstream-types.generated.ts. Edit it and run `npm run gen`;
+# never edit the generated file. `npm run gen:check` fails when they differ, and
+# `npm run gen:go-test` fails when this manifest drifts from the Go source of
+# github.com/hollis-labs/go-chatstream (the fields of Event and Usage, and the
+# Verb, PartKind, FinishReason, ApprovalMode, UsageScope, gap-reason and
+# run-error-code sets).
+#
+# THIS MANIFEST DECLARES WIRE IDENTITY ONLY, like go-envelopes' own.
+
+core:
+  - type: chatstream-event
+    description: >-
+      One item of a chat stream: the flat Event envelope of go-chatstream, with
+      the vocabularies it draws on (Verb, PartKind, FinishReason, ApprovalMode,
+      UsageScope, gap reasons, run error codes) as definitions.
+
+  - type: chatstream-capabilities
+    description: >-
+      What a stream can and cannot do (go-chatstream's Capabilities). Go gives
+      this struct no JSON tags, so its shape here is the shape encoding/json
+      would produce: PascalCase keys and numeric enums.

@@ -1,0 +1,23 @@
+{
+  "//": "Single-package repo; strict TypeScript, noEmit for typechecking (src plus the typecheck-only fixtures in test/types). tsconfig.build.json turns emit on and narrows to src.",
+  "compilerOptions": {
+    "target": "es2023",
+    "lib": ["ES2023", "DOM"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "types": ["node"],
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "erasableSyntaxOnly": true,
+    "ignoreDeprecations": "6.0"
+  },
+  "include": ["src", "test/types"]
+}

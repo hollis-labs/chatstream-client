@@ -1,0 +1,136 @@
+{
+  "$id": "chatstream-event",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Chatstream Event",
+  "description": "One item of a chat stream (go-chatstream Event). The struct is flat: the fields of every verb sit side by side, and which are meaningful depends on verb. On the wire the SSE id field carries the cursor (the hub's seq); the JSON seq is 0 until the client copies the id into it.",
+  "type": "object",
+  "required": ["v", "seq", "run_id", "time", "verb"],
+  "additionalProperties": false,
+  "properties": {
+    "v": { "type": "string", "description": "Schema version; \"1\". The schema is additive-only: a consumer ignores what it does not know." },
+    "seq": { "type": "integer", "minimum": 0, "description": "The hub's cursor for this event. Decoders leave it 0; the SSE id carries it on the wire." },
+    "run_id": { "type": "string", "description": "The run this event belongs to." },
+    "time": { "type": "string", "format": "date-time", "description": "When the decoder produced the event (RFC 3339)." },
+    "verb": {
+      "anyOf": [{ "$ref": "#/$defs/Verb" }, { "type": "string" }],
+      "description": "What the event means. A Verb, or a verb a newer producer added; consumers ignore verbs they do not know."
+    },
+
+    "parent_run_id": { "type": "string", "description": "run.start: the run this one continues." },
+    "provider": { "type": "string", "description": "run.start: who is answering." },
+    "model": { "type": "string", "description": "run.start: which model." },
+
+    "reason": { "type": "string", "description": "run.finish: a FinishReason. run.abort: the cause. approval.request: why. gap: a gap reason." },
+    "raw_reason": { "type": "string", "description": "run.finish: the dialect's own word for the finish reason." },
+
+    "code": { "type": "string", "description": "run.error: the error code (see ErrorCode; a dialect's own codes pass through)." },
+    "retryable": { "type": "boolean", "description": "run.error: whether a retry may succeed." },
+    "message": { "type": "string", "description": "run.error: a human-readable message." },
+
+    "step_id": { "type": "string", "description": "step.start, step.finish." },
+    "name": { "type": "string", "description": "step.start, step.finish: the step's name." },
+
+    "message_id": { "type": "string", "description": "message.start, message.end." },
+    "role": { "type": "string", "description": "message.start: the message's role." },
+
+    "part_id": { "type": "string", "description": "part.start, part.delta, part.end." },
+    "kind": { "type": "string", "description": "part.start: a PartKind. activity: the namespaced activity kind (\"nanite.slot_changed\")." },
+    "meta": { "type": "object", "additionalProperties": true, "description": "part.start: conventions such as name, call_id, is_error, detail, phase, url, media_type, title, filename, source_id." },
+    "text": { "type": "string", "description": "part.delta: appended text (text, reasoning, refusal parts)." },
+    "json_fragment": { "type": "string", "description": "part.delta: appended tool-call argument JSON." },
+    "final": { "description": "part.end: a tool_call's parsed arguments, a reasoning part's signature or encrypted value." },
+
+    "approval_id": { "type": "string", "description": "approval.request." },
+    "call_id": { "type": "string", "description": "approval.request: the tool_call part the approval is for." },
+    "descriptor": { "description": "approval.request: an opaque description of what is being approved." },
+    "mode": { "$ref": "#/$defs/ApprovalMode" },
+    "expires_at": { "type": "string", "format": "date-time", "description": "approval.request: when the request lapses." },
+
+    "usage": { "$ref": "#/$defs/Usage" },
+
+    "value": { "description": "activity: the value." },
+    "patch": { "description": "activity: an RFC 6902 patch." },
+
+    "from": { "type": "integer", "minimum": 0, "description": "gap: first lost cursor." },
+    "to": { "type": "integer", "minimum": 0, "description": "gap: last lost cursor." },
+
+    "ext": { "type": "object", "additionalProperties": true, "description": "Provider extras, namespaced by provider." },
+    "raw": { "$ref": "#/$defs/Raw" }
+  },
+  "$defs": {
+    "Verb": {
+      "description": "What an Event means. The scope nesting is run > step* > message > part*. run.finish, run.error and run.abort are terminal.",
+      "type": "string",
+      "enum": [
+        "run.start", "run.finish", "run.error", "run.abort",
+        "step.start", "step.finish",
+        "message.start", "message.end",
+        "part.start", "part.delta", "part.end",
+        "approval.request", "usage", "activity", "raw", "gap"
+      ]
+    },
+    "PartKind": {
+      "description": "What a part is.",
+      "type": "string",
+      "enum": ["text", "reasoning", "tool_call", "tool_result", "source", "file", "refusal", "data"]
+    },
+    "FinishReason": {
+      "description": "Why a run finished, in one closed vocabulary. \"cancelled\" is spelled as ACP and AG-UI spell it.",
+      "type": "string",
+      "enum": [
+        "stop", "length", "tool_calls", "refusal", "content_filter", "pause",
+        "context_exceeded", "turn_limit", "cancelled", "error", "other"
+      ]
+    },
+    "ApprovalMode": {
+      "description": "How an approval is answered: on the same connection (inband), or by ending the run and starting the next one (suspend).",
+      "type": "string",
+      "enum": ["inband", "suspend"]
+    },
+    "UsageScope": {
+      "description": "What a usage report covers: cumulative (a later report replaces an earlier one), final (the run's totals, once), or delta (reports add up).",
+      "type": "string",
+      "enum": ["cumulative", "final", "delta"]
+    },
+    "GapReason": {
+      "description": "Why events were lost. Generated by the hub or its framing layer, never by a decoder.",
+      "type": "string",
+      "enum": ["retention", "cursor_ahead", "dropped_slow", "ingest_overflow"]
+    },
+    "ErrorCode": {
+      "description": "Run error codes a decoder or hub synthesizes. A dialect's own codes pass through run.error code and are not limited to these.",
+      "type": "string",
+      "enum": [
+        "upstream_truncated", "stream_lost", "malformed_frame",
+        "frame_too_large", "limit_exceeded", "upstream_error"
+      ]
+    },
+    "Usage": {
+      "description": "Token usage as DISJOINT components: no token is counted in more than one field, so the total is a plain sum and cannot double-count.",
+      "type": "object",
+      "required": ["uncached_input", "output"],
+      "additionalProperties": false,
+      "properties": {
+        "scope": { "$ref": "#/$defs/UsageScope" },
+        "uncached_input": { "type": "integer", "description": "Prompt tokens that were neither read from nor written to a cache." },
+        "cache_read": { "type": "integer", "description": "Prompt tokens served from a cache." },
+        "cache_write": { "type": "integer", "description": "Prompt tokens written to a cache." },
+        "output": { "type": "integer", "description": "Generated tokens other than reasoning tokens." },
+        "reasoning": { "type": "integer", "description": "Generated reasoning tokens, when reported separately; otherwise they are inside output." },
+        "extra": { "type": "object", "additionalProperties": { "type": "integer" }, "description": "Provider counters that are not tokens of the run's own text. Never part of the total." },
+        "total": { "type": "integer", "description": "Derived by the Go encoder (the sum of the five components); ignored on decode. Never trust it over the components." }
+      }
+    },
+    "Raw": {
+      "description": "An upstream event preserved as received.",
+      "type": "object",
+      "required": ["dialect", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "dialect": { "type": "string" },
+        "type": { "type": "string" },
+        "payload": { "description": "The upstream payload; a JSON string when the bytes were not JSON." }
+      }
+    }
+  }
+}

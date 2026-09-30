@@ -1,0 +1,7 @@
+node_modules
+dist
+.registry-it
+*.tsbuildinfo
+*.tgz
+.DS_Store
+go.work

@@ -1,0 +1,59 @@
+{
+  "$id": "chatstream-capabilities",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Chatstream Capabilities",
+  "description": "What a provider's stream can and cannot do (go-chatstream Capabilities). Static and immutable; consumers adapt to it. Go declares no JSON tags, so keys are the Go field names and the enums are their numeric values.",
+  "type": "object",
+  "required": [
+    "Text", "ToolArgs", "Tools", "Reasoning", "ReasoningRoundTrip", "Usage",
+    "CacheTokens", "ReasoningTokens", "Citations", "Refusal", "ServerTools",
+    "Files", "InterleavedParts", "Cancel", "ResumeCursor", "Approval", "Framing"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "Text": { "$ref": "#/$defs/Granularity", "description": "How finely text streams." },
+    "ToolArgs": { "$ref": "#/$defs/Granularity", "description": "How finely tool-call arguments stream." },
+    "Tools": { "type": "boolean", "description": "The dialect carries tool calls at all." },
+    "Reasoning": { "$ref": "#/$defs/ReasoningCap" },
+    "ReasoningRoundTrip": { "type": "boolean", "description": "A signature or encrypted value must be sent back with the next request." },
+    "Usage": { "$ref": "#/$defs/UsageTiming" },
+    "CacheTokens": { "type": "boolean", "description": "Usage breaks out cache tokens." },
+    "ReasoningTokens": { "type": "boolean", "description": "Usage breaks out reasoning tokens." },
+    "Citations": { "type": "boolean" },
+    "Refusal": { "type": "boolean" },
+    "ServerTools": { "type": "boolean" },
+    "Files": { "type": "boolean" },
+    "InterleavedParts": { "type": "boolean", "description": "Parts may be open at the same time." },
+    "Cancel": { "type": "boolean", "description": "The upstream can be canceled mid-stream." },
+    "ResumeCursor": { "type": "boolean", "description": "The upstream can resume from a cursor." },
+    "Approval": { "$ref": "#/$defs/ApprovalCap" },
+    "Framing": { "$ref": "#/$defs/Framing" }
+  },
+  "$defs": {
+    "Granularity": {
+      "description": "0 none, 1 token (many small deltas), 2 chunk (a few larger deltas), 3 final (the whole value once, at the end).",
+      "type": "integer",
+      "enum": [0, 1, 2, 3]
+    },
+    "ReasoningCap": {
+      "description": "0 none, 1 summary, 2 full.",
+      "type": "integer",
+      "enum": [0, 1, 2]
+    },
+    "UsageTiming": {
+      "description": "0 none, 1 at end, 2 incremental.",
+      "type": "integer",
+      "enum": [0, 1, 2]
+    },
+    "ApprovalCap": {
+      "description": "0 none, 1 in-band, 2 suspend.",
+      "type": "integer",
+      "enum": [0, 1, 2]
+    },
+    "Framing": {
+      "description": "0 unset, 1 SSE, 2 NDJSON, 3 JSON-RPC lines. A declaration with framing unset is invalid in Go.",
+      "type": "integer",
+      "enum": [0, 1, 2, 3]
+    }
+  }
+}
